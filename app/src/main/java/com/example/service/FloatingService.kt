@@ -25,6 +25,19 @@ import androidx.compose.ui.unit.dp
 import androidx.core.app.NotificationCompat
 import androidx.lifecycle.*
 import androidx.savedstate.*
+
+import android.speech.RecognitionListener
+import android.speech.RecognizerIntent
+import android.speech.SpeechRecognizer
+import android.os.Bundle
+import android.util.Log
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.delay
+import android.Manifest
+import android.content.pm.PackageManager
+import androidx.core.content.ContextCompat
 import com.example.core.AssistantCore
 import com.example.ui.theme.MyApplicationTheme
 import com.example.viewmodel.AssistantState
@@ -37,11 +50,17 @@ class FloatingService : Service() {
     private var paramsX = 100
     private var paramsY = 100
 
+    private var speechRecognizer: SpeechRecognizer? = null
+    private var isListeningForWakeWord = false
+    private val serviceScope = CoroutineScope(Dispatchers.Main)
+
+
     override fun onCreate() {
         super.onCreate()
         AssistantCore.init(applicationContext)
         startForegroundServiceNotification()
         setupFloatingView()
+        initWakeWordListener()
     }
 
     private fun startForegroundServiceNotification() {
@@ -62,7 +81,11 @@ class FloatingService : Service() {
             .setSmallIcon(android.R.drawable.ic_btn_speak_now)
             .build()
             
-        startForeground(1, notification)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            startForeground(1, notification, android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE)
+        } else {
+            startForeground(1, notification)
+        }
     }
 
     private fun setupFloatingView() {
@@ -136,12 +159,117 @@ class FloatingService : Service() {
         windowManager.addView(composeView, params)
     }
 
+    
+    private fun initWakeWordListener() {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+            return
+        }
+
+        if (SpeechRecognizer.isRecognitionAvailable(this)) {
+            speechRecognizer = SpeechRecognizer.createSpeechRecognizer(this)
+            speechRecognizer?.setRecognitionListener(object : RecognitionListener {
+                override fun onReadyForSpeech(params: Bundle?) {}
+                override fun onBeginningOfSpeech() {}
+                override fun onRmsChanged(rmsdB: Float) {}
+                override fun onBufferReceived(buffer: ByteArray?) {}
+                override fun onEndOfSpeech() {}
+                override fun onError(error: Int) {
+                    isListeningForWakeWord = false
+                    // Restart listening if still IDLE
+                    if (AssistantCore.state.value == AssistantState.IDLE) {
+                        serviceScope.launch {
+                            delay(2000)
+                            startWakeWordListening()
+                        }
+                    }
+                }
+
+                override fun onResults(results: Bundle?) {
+                    isListeningForWakeWord = false
+                    val matches = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
+                    val wakeWord = AssistantCore.getWakeWord().lowercase()
+                    if (matches != null) {
+                        for (match in matches) {
+                            if (match.lowercase().contains(wakeWord)) {
+                                Log.d("WakeWord", "Wake word detected!")
+                                // Open App and Start Assistant
+                                val intent = Intent(this@FloatingService, com.example.MainActivity::class.java).apply {
+                                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+                                }
+                                startActivity(intent)
+                                
+                                // Give it a slight delay to open the app
+                                serviceScope.launch {
+                                    delay(500)
+                                    if (AssistantCore.state.value == AssistantState.IDLE) {
+                                        AssistantCore.toggleConnection()
+                                    }
+                                }
+                                return
+                            }
+                        }
+                    }
+                    // Restart if not detected
+                    if (AssistantCore.state.value == AssistantState.IDLE) {
+                        startWakeWordListening()
+                    }
+                }
+
+                override fun onPartialResults(partialResults: Bundle?) {}
+                override fun onEvent(eventType: Int, params: Bundle?) {}
+            })
+            
+            // Observe state to start/stop
+            serviceScope.launch {
+                AssistantCore.state.collect { state ->
+                    if (state == AssistantState.IDLE) {
+                        startWakeWordListening()
+                    } else {
+                        stopWakeWordListening()
+                    }
+                }
+            }
+        }
+    }
+
+    private fun startWakeWordListening() {
+        if (!isListeningForWakeWord && speechRecognizer != null && AssistantCore.state.value == AssistantState.IDLE) {
+            val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+                putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+                putExtra(RecognizerIntent.EXTRA_CALLING_PACKAGE, packageName)
+                putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 3)
+            }
+            try {
+                speechRecognizer?.startListening(intent)
+                isListeningForWakeWord = true
+            } catch (e: Exception) {
+                Log.e("WakeWord", "Failed to start listening", e)
+            }
+        }
+    }
+
+    private fun stopWakeWordListening() {
+        if (isListeningForWakeWord && speechRecognizer != null) {
+            speechRecognizer?.stopListening()
+            isListeningForWakeWord = false
+        }
+    }
+
+    
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        return START_STICKY
+    }
+
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onDestroy() {
         super.onDestroy()
         windowManager.removeView(composeView)
         lifecycleOwner.stop()
+
+        speechRecognizer?.destroy()
+        speechRecognizer = null
+
     }
 }
 

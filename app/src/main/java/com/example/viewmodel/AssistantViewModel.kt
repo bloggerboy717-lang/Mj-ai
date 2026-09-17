@@ -33,6 +33,10 @@ class AssistantViewModel(application: Application) : AndroidViewModel(applicatio
     fun getPersona(): String = AssistantCore.getPersona()
     fun savePersona(persona: String) = AssistantCore.savePersona(persona)
     
+    
+    fun getWakeWord(): String = AssistantCore.getWakeWord()
+    fun saveWakeWord(word: String) = AssistantCore.saveWakeWord(word)
+
     fun getOrbSize(): Float = AssistantCore.getOrbSize()
     fun saveOrbSize(size: Float) = AssistantCore.saveOrbSize(size)
     

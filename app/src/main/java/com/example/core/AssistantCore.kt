@@ -195,6 +195,17 @@ object AssistantCore {
         prefs?.edit()?.putString("persona", persona)?.apply()
     }
 
+    
+    fun getWakeWord(): String {
+        val prefs = context?.getSharedPreferences("mj_settings", Context.MODE_PRIVATE)
+        return prefs?.getString("wake_word", "Hey MJ") ?: "Hey MJ"
+    }
+
+    fun saveWakeWord(word: String) {
+        val prefs = context?.getSharedPreferences("mj_settings", Context.MODE_PRIVATE)
+        prefs?.edit()?.putString("wake_word", word)?.apply()
+    }
+
     fun getOrbSize(): Float {
         val prefs = context?.getSharedPreferences("mj_settings", Context.MODE_PRIVATE)
         return prefs?.getFloat("orb_size", 1f) ?: 1f

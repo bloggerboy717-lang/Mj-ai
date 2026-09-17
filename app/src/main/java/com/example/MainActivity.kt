@@ -1,5 +1,7 @@
 package com.example
 
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.delay
 import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -35,6 +37,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
@@ -62,20 +65,28 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        
         setContent {
             MyApplicationTheme {
-                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    AssistantScreen(
-                        viewModel = viewModel,
-                        modifier = Modifier.padding(innerPadding),
-                        onMicrophoneClick = { checkPermissionsAndToggle() }
-                    )
+                var currentScreen by remember { mutableStateOf("splash") }
+
+                if (currentScreen == "splash") {
+                    SplashScreen(onTimeout = { currentScreen = "assistant" })
+                } else {
+                    Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
+                        AssistantScreen(
+                            viewModel = viewModel,
+                            modifier = Modifier.padding(innerPadding),
+                            onMicrophoneClick = { checkPermissionsAndToggle() }
+                        )
+                    }
                 }
             }
         }
+
         
         // Start service if permission is already granted
-        if (Settings.canDrawOverlays(this)) {
+        if (Settings.canDrawOverlays(this) && ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) {
             startFloatingService()
         }
     }
@@ -153,6 +164,7 @@ fun AssistantScreen(
     var apiKeyInput by remember { mutableStateOf(viewModel.getApiKey()) }
     var elevenLabsKeyInput by remember { mutableStateOf(viewModel.getElevenLabsKey()) }
     var userNameInput by remember { mutableStateOf(viewModel.getUserName()) }
+    var wakeWordInput by remember { mutableStateOf(viewModel.getWakeWord()) }
     var personaInput by remember { mutableStateOf(viewModel.getPersona()) }
     var orbSizeInput by remember { mutableStateOf(viewModel.getOrbSize()) }
     var orbThemeInput by remember { mutableStateOf(viewModel.getOrbTheme()) }
@@ -294,6 +306,7 @@ fun AssistantScreen(
                                 viewModel.saveElevenLabsKey(elevenLabsKeyInput)
                                 viewModel.saveUserName(userNameInput)
                                 viewModel.savePersona(personaInput)
+                                viewModel.saveWakeWord(wakeWordInput)
                                 viewModel.saveOrbSize(orbSizeInput)
                                 viewModel.saveOrbTheme(orbThemeInput)
                                 showSettings = false
@@ -403,32 +416,55 @@ fun AssistantScreen(
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(Color(0xFFFFF0E6)) // Very light orange background
+            .background(Color.Black) // Very light orange background
     ) {
+        
+        val infiniteTransitionTitle = rememberInfiniteTransition(label = "title_anim")
+        val titleScale by infiniteTransitionTitle.animateFloat(
+            initialValue = 0.95f,
+            targetValue = 1.05f,
+            animationSpec = infiniteRepeatable(
+                animation = tween(1500, easing = FastOutSlowInEasing),
+                repeatMode = RepeatMode.Reverse
+            ),
+            label = "title_scale"
+        )
+        val titleAlpha by infiniteTransitionTitle.animateFloat(
+            initialValue = 0.7f,
+            targetValue = 1f,
+            animationSpec = infiniteRepeatable(
+                animation = tween(1500, easing = FastOutSlowInEasing),
+                repeatMode = RepeatMode.Reverse
+            ),
+            label = "title_alpha"
+        )
+
         Text(
             text = "M.J",
             style = MaterialTheme.typography.displayMedium,
             fontWeight = FontWeight.Bold,
-            color = orangeAccent,
+            color = Color(0xFF00BFFF), // Sky Blue Color
             modifier = Modifier
                 .align(Alignment.TopCenter)
                 .padding(top = 64.dp)
+                .scale(titleScale)
+                .alpha(titleAlpha)
         )
 
-        // Show ORB only when microphone is listening/speaking/connecting
-        if (state != AssistantState.IDLE && state != AssistantState.ERROR) {
-            androidx.compose.foundation.layout.Box(
-                modifier = Modifier
-                    .align(Alignment.Center)
-                    .size(250.dp)
-            ) {
-                com.example.ui.FloatingOrb(
-                    state = state,
-                    modifier = Modifier.fillMaxSize(),
-                    sizeMultiplier = viewModel.getOrbSize(),
-                    themeIndex = viewModel.getOrbTheme()
-                )
-            }
+
+        // Show ORB always
+        androidx.compose.foundation.layout.Box(
+            modifier = Modifier
+                .align(Alignment.Center)
+                .size(250.dp)
+        ) {
+            com.example.ui.FloatingOrb(
+                // Force LISTENING state so it always spins colorfully
+                state = if (state == AssistantState.IDLE) AssistantState.LISTENING else state,
+                modifier = Modifier.fillMaxSize(),
+                sizeMultiplier = viewModel.getOrbSize(),
+                themeIndex = viewModel.getOrbTheme()
+            )
         }
 
         Column(
@@ -458,7 +494,7 @@ fun AssistantScreen(
             Text(
                 text = statusText,
                 style = MaterialTheme.typography.bodyLarge,
-                color = Color.DarkGray,
+                color = Color.White,
                 fontWeight = FontWeight.Medium,
                 modifier = Modifier.padding(bottom = 24.dp)
             )
@@ -469,11 +505,23 @@ fun AssistantScreen(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 // Pill Background
+                val infiniteTransitionTab = rememberInfiniteTransition(label = "tab_anim")
+                val tabScale by infiniteTransitionTab.animateFloat(
+                    initialValue = 0.98f,
+                    targetValue = 1.02f,
+                    animationSpec = infiniteRepeatable(
+                        animation = tween(2000, easing = LinearOutSlowInEasing),
+                        repeatMode = RepeatMode.Reverse
+                    ),
+                    label = "tab_scale"
+                )
+                
                 Row(
                     modifier = Modifier
                         .width(280.dp)
                         .height(64.dp)
-                        .background(Color(0xFF1E1E1E), RoundedCornerShape(32.dp)),
+                        .scale(tabScale)
+                        .background(Color(0xFFE0B877), RoundedCornerShape(32.dp)),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
@@ -487,13 +535,13 @@ fun AssistantScreen(
                     ) {
                         Column(
                             modifier = Modifier
-                                .background(Color(0xFF332014), RoundedCornerShape(20.dp))
+                                .background(Color(0xFFD1A471), RoundedCornerShape(20.dp))
                                 .padding(horizontal = 24.dp, vertical = 8.dp),
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.Center
                         ) {
-                            Icon(Icons.Default.Chat, contentDescription = "Chat", tint = orangeAccent, modifier = Modifier.size(20.dp))
-                            Text("Chat", color = orangeAccent, fontSize = 12.sp)
+                            Icon(Icons.Default.Chat, contentDescription = "Chat", tint = Color.Black, modifier = Modifier.size(20.dp))
+                            Text("Chat", color = Color.Black, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                         }
                     }
 
@@ -509,6 +557,7 @@ fun AssistantScreen(
                                 elevenLabsKeyInput = viewModel.getElevenLabsKey()
                                 userNameInput = viewModel.getUserName()
                                 personaInput = viewModel.getPersona()
+                                wakeWordInput = viewModel.getWakeWord()
                                 orbSizeInput = viewModel.getOrbSize()
                                 orbThemeInput = viewModel.getOrbTheme()
                                 showSettings = true
@@ -516,11 +565,14 @@ fun AssistantScreen(
                         contentAlignment = Alignment.Center
                     ) {
                         Column(
+                            modifier = Modifier
+                                .background(Color(0xFFD1A471), RoundedCornerShape(20.dp))
+                                .padding(horizontal = 24.dp, vertical = 8.dp),
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.Center
                         ) {
-                            Icon(Icons.Default.SettingsIcon, contentDescription = "Settings", tint = Color.Gray, modifier = Modifier.size(20.dp))
-                            Text("Settings", color = Color.Gray, fontSize = 12.sp)
+                            Icon(Icons.Default.SettingsIcon, contentDescription = "Settings", tint = Color.Black, modifier = Modifier.size(20.dp))
+                            Text("Settings", color = Color.Black, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                         }
                     }
                 }
@@ -553,7 +605,7 @@ fun MicrophoneButton(
         label = "pulse_scale"
     )
 
-    val buttonColor = Color(0xFFFE7C22)
+    val buttonColor = Color(0xFFFFA500)
 
     Box(
         modifier = modifier
@@ -578,5 +630,52 @@ fun MicrophoneButton(
                 modifier = Modifier.size(32.dp)
             )
         }
+    }
+}
+
+
+@Composable
+fun SplashScreen(onTimeout: () -> Unit) {
+    val scale = remember { androidx.compose.animation.core.Animatable(0.5f) }
+    val alpha = remember { androidx.compose.animation.core.Animatable(0f) }
+    
+    LaunchedEffect(Unit) {
+        // "Dangerous" / Awesome animation
+        
+        launch {
+            scale.animateTo(
+                targetValue = 1.2f,
+                animationSpec = tween(1200, easing = FastOutSlowInEasing)
+            )
+            scale.animateTo(
+                targetValue = 1f,
+                animationSpec = tween(500, easing = LinearOutSlowInEasing)
+            )
+        }
+        launch {
+            alpha.animateTo(
+                targetValue = 1f,
+                animationSpec = tween(1000)
+            )
+        }
+
+        kotlinx.coroutines.delay(2000)
+        onTimeout()
+    }
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black),
+        contentAlignment = Alignment.Center
+    ) {
+        androidx.compose.foundation.Image(
+            painter = androidx.compose.ui.res.painterResource(id = com.example.R.drawable.app_logo),
+            contentDescription = "App Logo",
+            modifier = Modifier
+                .size(250.dp)
+                .scale(scale.value)
+                .alpha(alpha.value)
+        )
     }
 }

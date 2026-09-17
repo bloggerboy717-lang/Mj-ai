@@ -58,7 +58,7 @@ fun FloatingOrb(state: AssistantState, modifier: Modifier = Modifier, sizeMultip
                 val screenY = center.y + yRot * radius
                 
                 val depth = (zRot + 1f) / 2f // 0 to 1, where 1 is front
-                val dotRadius = 1.5f + depth * 3f // small dots
+                val dotRadius = 3.5f + depth * 7f // small dots
 
                 // Color mapped across the sphere to create a gradient
                 val baseHue = when (themeIndex) {
