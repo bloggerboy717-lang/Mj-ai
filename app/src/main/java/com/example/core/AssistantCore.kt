@@ -40,6 +40,9 @@ object AssistantCore {
 
     private var deviceActionBridge: DeviceActionBridge? = null
     private var geminiClient: GeminiLiveClient? = null
+    
+    private var retryCount = 0
+    private var isReconnecting = false
     private var audioRecorder: AudioRecorder? = null
     private var audioPlayer: AudioPlayer? = null
     private var isUserRequestedDisconnect = false
@@ -73,7 +76,8 @@ object AssistantCore {
         coroutineScope.launch {
             geminiClient?.serverMessages?.collect { serverMessage ->
                 if (serverMessage.setupComplete != null) {
-                    Log.d("AssistantCore", "Setup complete received, starting audio recording")
+                    Log.d("AssistantCore", "Setup complete received")
+                    if (isUserRequestedDisconnect) return@collect
                     _state.value = AssistantState.LISTENING
                     audioRecorder?.startRecording()
                 }
@@ -117,21 +121,34 @@ object AssistantCore {
         coroutineScope.launch {
             geminiClient?.connectionState?.collect { isConnected ->
                 if (isConnected) {
+                    // Reset retry variables on successful connection
+                    retryCount = 0
+                    isReconnecting = false
                     // Do not start recording until setupComplete is received
                     _state.value = AssistantState.CONNECTING
                 } else {
-                    val wasActive = _state.value == AssistantState.LISTENING || _state.value == AssistantState.SPEAKING
+                    val wasActive = _state.value == AssistantState.LISTENING || _state.value == AssistantState.SPEAKING || _state.value == AssistantState.CONNECTING
                     _state.value = AssistantState.IDLE
                     audioRecorder?.stopRecording()
                     audioPlayer?.stopAndClearQueue()
                     
-                    if (wasActive && !isUserRequestedDisconnect) {
-                        Log.d("AssistantCore", "Connection dropped, reconnecting...")
-                        // small delay to prevent rapid spinning on hard failure
-                        kotlinx.coroutines.delay(1000)
+                    if ((wasActive || isReconnecting) && !isUserRequestedDisconnect && retryCount < 5) {
+                        isReconnecting = true
+                        val delayTime = (1000.0 * Math.pow(2.0, retryCount.toDouble())).toLong()
+                        Log.d("AssistantCore", "Connection dropped, reconnecting in ${delayTime}ms (Attempt ${retryCount + 1})")
+                        
+                        _error.value = "Connection dropped. Reconnecting... (${retryCount + 1}/5)"
+                        
+                        kotlinx.coroutines.delay(delayTime)
+                        
                         if (!isUserRequestedDisconnect) {
+                            retryCount++
                             toggleConnection()
                         }
+                    } else if (retryCount >= 5) {
+                        _error.value = "Failed to reconnect. Please try again."
+                        isReconnecting = false
+                        retryCount = 0
                     }
                 }
             }
@@ -259,6 +276,13 @@ object AssistantCore {
             current + ChatMessage(text = text, isFromUser = true)
         }
         geminiClient?.sendTextMessage(text)
+    }
+
+    fun disconnect() {
+        if (_state.value != AssistantState.IDLE) {
+            isUserRequestedDisconnect = true
+            geminiClient?.disconnect()
+        }
     }
 
     fun toggleConnection() {

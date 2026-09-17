@@ -22,6 +22,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.unit.dp
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.CircleShape
 import androidx.core.app.NotificationCompat
 import androidx.lifecycle.*
 import androidx.savedstate.*
@@ -119,7 +123,11 @@ class FloatingService : Service() {
                         Box(
                             modifier = Modifier
                                 .size(displaySize)
-                                .pointerInput(Unit) {
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .pointerInput(Unit) {
                                     detectDragGestures { change, dragAmount ->
                                         change.consume()
                                         paramsX += dragAmount.x.toInt()
@@ -139,13 +147,30 @@ class FloatingService : Service() {
                                         }
                                     )
                                 }
-                        ) {
-                            com.example.ui.FloatingOrb(
-                                state = state,
-                                modifier = Modifier.fillMaxSize(),
-                                sizeMultiplier = 1f,
-                                themeIndex = orbTheme
-                            )
+                            ) {
+                                com.example.ui.FloatingOrb(
+                                    state = state,
+                                    modifier = Modifier.fillMaxSize(),
+                                    sizeMultiplier = 1f,
+                                    themeIndex = orbTheme
+                                )
+                            }
+                            
+                            // Close button at top right
+                            androidx.compose.material3.IconButton(
+                                onClick = { AssistantCore.disconnect() },
+                                modifier = Modifier
+                                    .align(androidx.compose.ui.Alignment.TopEnd)
+                                    .size(24.dp)
+                                    .background(androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.5f), androidx.compose.foundation.shape.CircleShape)
+                            ) {
+                                androidx.compose.material3.Icon(
+                                    imageVector = androidx.compose.material.icons.Icons.Default.Close,
+                                    contentDescription = "Close",
+                                    tint = androidx.compose.ui.graphics.Color.White,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
                         }
                     }
                 }

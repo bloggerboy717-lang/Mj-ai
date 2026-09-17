@@ -115,7 +115,7 @@ data class FunctionResponse(
 
 @JsonClass(generateAdapter = true)
 data class ServerMessage(
-    val setupComplete: SetupComplete? = null,
+    val setupComplete: Map<String, Any>? = null,
     val serverContent: ServerContent? = null,
     val toolCall: ToolCallMessage? = null
 )
@@ -140,4 +140,4 @@ data class FunctionCall(
 )
 
 @JsonClass(generateAdapter = true)
-data class SetupComplete(val placeholder: String? = null)
+class SetupComplete
