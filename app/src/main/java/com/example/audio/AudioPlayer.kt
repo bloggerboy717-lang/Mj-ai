@@ -24,7 +24,7 @@ class AudioPlayer(
         val sampleRate = 24000
         val channelConfig = AudioFormat.CHANNEL_OUT_MONO
         val audioFormat = AudioFormat.ENCODING_PCM_16BIT
-        val bufferSize = AudioTrack.getMinBufferSize(sampleRate, channelConfig, audioFormat) * 4
+        val bufferSize = AudioTrack.getMinBufferSize(sampleRate, channelConfig, audioFormat) * 8 // Increased buffer for smooth playback
 
         audioTrack = AudioTrack.Builder()
             .setAudioAttributes(
@@ -65,11 +65,11 @@ class AudioPlayer(
         playbackJob = coroutineScope.launch {
             onPlaybackStateChanged(true)
             
-            // Collect chunks for a short time to build a buffer and prevent stutter
+            // Build a solid buffer to prevent robotic stuttering
             val initialChunks = mutableListOf<ByteArray>()
             try {
-                kotlinx.coroutines.withTimeout(500) {
-                    while (initialChunks.size < 4 && isActive) {
+                kotlinx.coroutines.withTimeout(800) {
+                    while (initialChunks.size < 8 && isActive) {
                         val data = audioQueue.receiveCatching().getOrNull()
                         if (data != null) {
                             initialChunks.add(data)
@@ -79,7 +79,7 @@ class AudioPlayer(
                     }
                 }
             } catch (e: Exception) {
-                // Timeout reached, just proceed with what we have
+                // Timeout reached
             }
             
             audioTrack?.play()

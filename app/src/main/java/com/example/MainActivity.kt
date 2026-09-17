@@ -127,27 +127,29 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun checkPermissionsAndToggle() {
-        val permissionsToRequest = mutableListOf(Manifest.permission.RECORD_AUDIO)
+        val permissionsToRequest = mutableListOf(
+            Manifest.permission.RECORD_AUDIO,
+            Manifest.permission.CALL_PHONE,
+            Manifest.permission.READ_CONTACTS,
+            Manifest.permission.ACCESS_FINE_LOCATION,
+            Manifest.permission.ACCESS_COARSE_LOCATION
+        )
         
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.CALL_PHONE) != PackageManager.PERMISSION_GRANTED) {
-            permissionsToRequest.add(Manifest.permission.CALL_PHONE)
-        }
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_CONTACTS) != PackageManager.PERMISSION_GRANTED) {
-            permissionsToRequest.add(Manifest.permission.READ_CONTACTS)
-        }
+        val neededPermissions = permissionsToRequest.filter { 
+            ContextCompat.checkSelfPermission(this, it) != PackageManager.PERMISSION_GRANTED 
+        }.toMutableList()
         
-        // Post notifications for foreground service
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
-                permissionsToRequest.add(Manifest.permission.POST_NOTIFICATIONS)
+                neededPermissions.add(Manifest.permission.POST_NOTIFICATIONS)
             }
         }
 
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) {
+        if (neededPermissions.isEmpty()) {
             checkOverlayPermissionAndStartService()
             viewModel.toggleConnection()
         } else {
-            requestPermissionLauncher.launch(permissionsToRequest.toTypedArray())
+            requestPermissionLauncher.launch(neededPermissions.toTypedArray())
         }
     }
 }

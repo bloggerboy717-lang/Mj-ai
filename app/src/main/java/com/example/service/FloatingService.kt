@@ -117,8 +117,9 @@ class FloatingService : Service() {
                     val state by AssistantCore.state.collectAsState()
                     val orbSize by AssistantCore.orbSizeFlow.collectAsState()
                     val orbTheme by AssistantCore.orbThemeFlow.collectAsState()
+                    val isOrbVisible by AssistantCore.isOrbVisible.collectAsState()
                     
-                    if (state != AssistantState.IDLE && state != AssistantState.ERROR) {
+                    if (state != AssistantState.IDLE && state != AssistantState.ERROR && isOrbVisible) {
                         val displaySize = (120 * orbSize).dp
                         Box(
                             modifier = Modifier
@@ -158,7 +159,7 @@ class FloatingService : Service() {
                             
                             // Close button at top right
                             androidx.compose.material3.IconButton(
-                                onClick = { AssistantCore.disconnect() },
+                                onClick = { AssistantCore.setOrbVisible(false) },
                                 modifier = Modifier
                                     .align(androidx.compose.ui.Alignment.TopEnd)
                                     .size(24.dp)

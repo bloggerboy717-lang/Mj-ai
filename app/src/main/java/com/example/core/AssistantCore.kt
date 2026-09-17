@@ -37,6 +37,13 @@ object AssistantCore {
 
     private val _orbThemeFlow = MutableStateFlow(0)
     val orbThemeFlow: StateFlow<Int> = _orbThemeFlow.asStateFlow()
+    
+    private val _isOrbVisible = MutableStateFlow(true)
+    val isOrbVisible: StateFlow<Boolean> = _isOrbVisible.asStateFlow()
+    
+    fun setOrbVisible(visible: Boolean) {
+        _isOrbVisible.value = visible
+    }
 
     private var deviceActionBridge: DeviceActionBridge? = null
     private var geminiClient: GeminiLiveClient? = null
@@ -297,6 +304,7 @@ object AssistantCore {
         when (_state.value) {
             AssistantState.IDLE, AssistantState.ERROR -> {
                 isUserRequestedDisconnect = false
+                _isOrbVisible.value = true
                 hasFatalError = false
                 val apiKey = getApiKey()
                 if (apiKey.isEmpty()) {
