@@ -33,6 +33,9 @@ class GeminiLiveClient {
     private val _connectionState = MutableSharedFlow<Boolean>(extraBufferCapacity = 1)
     val connectionState: SharedFlow<Boolean> = _connectionState
 
+    private val _errorMessages = MutableSharedFlow<String>(extraBufferCapacity = 1)
+    val errorMessages: SharedFlow<String> = _errorMessages
+
     fun connect(apiKey: String) {
         if (apiKey.isEmpty()) {
             Log.e("GeminiLiveClient", "API Key is empty")
@@ -73,7 +76,9 @@ class GeminiLiveClient {
             }
 
             override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
-                Log.e("GeminiLiveClient", "WebSocket Error", t)
+                val errorMsg = "WebSocket Error: ${t.message}" + if (response != null) " (HTTP ${response.code})" else ""
+                Log.e("GeminiLiveClient", errorMsg, t)
+                _errorMessages.tryEmit(errorMsg)
                 _connectionState.tryEmit(false)
             }
         })
@@ -102,22 +107,22 @@ class GeminiLiveClient {
                             FunctionDeclaration(
                                 name = "getDeviceDetails",
                                 description = "Get details about the user's phone/device like battery, model, RAM, etc.",
-                                parameters = Parameters(type = "OBJECT", properties = emptyMap())
+                                parameters = null
                             ),
                             FunctionDeclaration(
                                 name = "getLocation",
                                 description = "Get the user's current physical location (City, State, Country).",
-                                parameters = Parameters(type = "OBJECT", properties = emptyMap())
+                                parameters = null
                             ),
                             FunctionDeclaration(
                                 name = "getWeather",
                                 description = "Get the current weather conditions for the user's location.",
-                                parameters = Parameters(type = "OBJECT", properties = emptyMap())
+                                parameters = null
                             ),
                             FunctionDeclaration(
                                 name = "openWhatsApp",
                                 description = "Open WhatsApp application",
-                                parameters = Parameters(type = "OBJECT", properties = emptyMap())
+                                parameters = null
                             ),
                             FunctionDeclaration(
                                 name = "openApp",

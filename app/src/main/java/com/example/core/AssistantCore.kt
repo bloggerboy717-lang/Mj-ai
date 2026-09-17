@@ -43,6 +43,7 @@ object AssistantCore {
     
     private var retryCount = 0
     private var isReconnecting = false
+    private var hasFatalError = false
     private var audioRecorder: AudioRecorder? = null
     private var audioPlayer: AudioPlayer? = null
     private var isUserRequestedDisconnect = false
@@ -119,6 +120,13 @@ object AssistantCore {
         }
 
         coroutineScope.launch {
+            geminiClient?.errorMessages?.collect { err ->
+                _error.value = "Gemini Error: $err"
+                hasFatalError = true
+            }
+        }
+        
+        coroutineScope.launch {
             geminiClient?.connectionState?.collect { isConnected ->
                 if (isConnected) {
                     // Reset retry variables on successful connection
@@ -132,7 +140,7 @@ object AssistantCore {
                     audioRecorder?.stopRecording()
                     audioPlayer?.stopAndClearQueue()
                     
-                    if ((wasActive || isReconnecting) && !isUserRequestedDisconnect && retryCount < 5) {
+                    if ((wasActive || isReconnecting) && !isUserRequestedDisconnect && !hasFatalError && retryCount < 5) {
                         isReconnecting = true
                         val delayTime = (1000.0 * Math.pow(2.0, retryCount.toDouble())).toLong()
                         Log.d("AssistantCore", "Connection dropped, reconnecting in ${delayTime}ms (Attempt ${retryCount + 1})")
@@ -289,6 +297,7 @@ object AssistantCore {
         when (_state.value) {
             AssistantState.IDLE, AssistantState.ERROR -> {
                 isUserRequestedDisconnect = false
+                hasFatalError = false
                 val apiKey = getApiKey()
                 if (apiKey.isEmpty()) {
                     _error.value = "Please enter your Gemini API Key in Settings"

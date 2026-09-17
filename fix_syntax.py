@@ -1,10 +1,9 @@
 import re
 
-with open('app/src/main/java/com/example/MainActivity.kt', 'r') as f:
+with open('app/src/main/java/com/example/core/AssistantCore.kt', 'r') as f:
     content = f.read()
 
-content = content.replace("Spacer(modifier = Modifier.height(16.dp)))", "Spacer(modifier = Modifier.height(16.dp))")
-content = content.replace("label = \"tab_scale\"\n                ))", "label = \"tab_scale\"\n                )")
+content = content.replace('    private var isUserRequestedDisconnect = false\n                hasFatalError = false\n    private var context: Context? = null', '    private var isUserRequestedDisconnect = false\n    private var context: Context? = null')
 
-with open('app/src/main/java/com/example/MainActivity.kt', 'w') as f:
+with open('app/src/main/java/com/example/core/AssistantCore.kt', 'w') as f:
     f.write(content)
