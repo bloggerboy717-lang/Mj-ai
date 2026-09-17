@@ -1,4 +1,9 @@
 package com.example
+import kotlin.math.roundToInt
+import androidx.compose.foundation.layout.offset
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.foundation.gestures.detectDragGestures
+
 
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
@@ -164,7 +169,6 @@ fun AssistantScreen(
     var apiKeyInput by remember { mutableStateOf(viewModel.getApiKey()) }
     var elevenLabsKeyInput by remember { mutableStateOf(viewModel.getElevenLabsKey()) }
     var userNameInput by remember { mutableStateOf(viewModel.getUserName()) }
-    var wakeWordInput by remember { mutableStateOf(viewModel.getWakeWord()) }
     var personaInput by remember { mutableStateOf(viewModel.getPersona()) }
     var orbSizeInput by remember { mutableStateOf(viewModel.getOrbSize()) }
     var orbThemeInput by remember { mutableStateOf(viewModel.getOrbTheme()) }
@@ -306,7 +310,7 @@ fun AssistantScreen(
                                 viewModel.saveElevenLabsKey(elevenLabsKeyInput)
                                 viewModel.saveUserName(userNameInput)
                                 viewModel.savePersona(personaInput)
-                                viewModel.saveWakeWord(wakeWordInput)
+                                
                                 viewModel.saveOrbSize(orbSizeInput)
                                 viewModel.saveOrbTheme(orbThemeInput)
                                 showSettings = false
@@ -317,6 +321,7 @@ fun AssistantScreen(
                             Text("Save changes", color = Color.White)
                         }
                     }
+                                        Spacer(modifier = Modifier.height(16.dp))
                     Spacer(modifier = Modifier.height(32.dp))
                 }
             }
@@ -453,11 +458,24 @@ fun AssistantScreen(
 
 
         // Show ORB always
+        
+        var orbOffsetX by remember { mutableStateOf(0f) }
+        var orbOffsetY by remember { mutableStateOf(0f) }
+        
         androidx.compose.foundation.layout.Box(
             modifier = Modifier
                 .align(Alignment.Center)
+                .offset { androidx.compose.ui.unit.IntOffset(orbOffsetX.roundToInt(), orbOffsetY.roundToInt()) }
                 .size(250.dp)
-        ) {
+                .pointerInput(Unit) {
+                    detectDragGestures { change, dragAmount ->
+                        change.consume()
+                        orbOffsetX += dragAmount.x
+                        orbOffsetY += dragAmount.y
+                    }
+                }
+        )
+ {
             com.example.ui.FloatingOrb(
                 // Force LISTENING state so it always spins colorfully
                 state = if (state == AssistantState.IDLE) AssistantState.LISTENING else state,
@@ -557,7 +575,7 @@ fun AssistantScreen(
                                 elevenLabsKeyInput = viewModel.getElevenLabsKey()
                                 userNameInput = viewModel.getUserName()
                                 personaInput = viewModel.getPersona()
-                                wakeWordInput = viewModel.getWakeWord()
+                                
                                 orbSizeInput = viewModel.getOrbSize()
                                 orbThemeInput = viewModel.getOrbTheme()
                                 showSettings = true

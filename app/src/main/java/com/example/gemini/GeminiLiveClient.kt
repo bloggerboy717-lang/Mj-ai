@@ -82,7 +82,7 @@ class GeminiLiveClient {
     private fun sendSetupMessage() {
         val setupMessage = ClientMessage(
             setup = Setup(
-                model = "models/gemini-3.1-flash-live-preview",
+                model = "models/gemini-2.0-flash-exp",
                 generationConfig = GenerationConfig(
                     responseModalities = listOf("AUDIO"),
                     speechConfig = SpeechConfig(
@@ -187,6 +187,7 @@ class GeminiLiveClient {
 
     private fun send(message: ClientMessage) {
         try {
+            if (webSocket == null) return
             val json = clientMessageAdapter.toJson(message)
             webSocket?.send(json)
         } catch (e: Exception) {

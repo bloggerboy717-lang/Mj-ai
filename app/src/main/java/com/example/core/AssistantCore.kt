@@ -36,6 +36,7 @@ object AssistantCore {
     private var geminiClient: GeminiLiveClient? = null
     private var audioRecorder: AudioRecorder? = null
     private var audioPlayer: AudioPlayer? = null
+    private var isUserRequestedDisconnect = false
     private var context: Context? = null
     
     private val coroutineScope = CoroutineScope(Dispatchers.IO)
@@ -104,9 +105,19 @@ object AssistantCore {
                     _state.value = AssistantState.LISTENING
                     audioRecorder?.startRecording()
                 } else {
+                    val wasActive = _state.value == AssistantState.LISTENING || _state.value == AssistantState.SPEAKING
                     _state.value = AssistantState.IDLE
                     audioRecorder?.stopRecording()
                     audioPlayer?.stopAndClearQueue()
+                    
+                    if (wasActive && !isUserRequestedDisconnect) {
+                        Log.d("AssistantCore", "Connection dropped, reconnecting...")
+                        // small delay to prevent rapid spinning on hard failure
+                        kotlinx.coroutines.delay(1000)
+                        if (!isUserRequestedDisconnect) {
+                            toggleConnection()
+                        }
+                    }
                 }
             }
         }
@@ -196,16 +207,6 @@ object AssistantCore {
     }
 
     
-    fun getWakeWord(): String {
-        val prefs = context?.getSharedPreferences("mj_settings", Context.MODE_PRIVATE)
-        return prefs?.getString("wake_word", "Hey MJ") ?: "Hey MJ"
-    }
-
-    fun saveWakeWord(word: String) {
-        val prefs = context?.getSharedPreferences("mj_settings", Context.MODE_PRIVATE)
-        prefs?.edit()?.putString("wake_word", word)?.apply()
-    }
-
     fun getOrbSize(): Float {
         val prefs = context?.getSharedPreferences("mj_settings", Context.MODE_PRIVATE)
         return prefs?.getFloat("orb_size", 1f) ?: 1f
@@ -237,6 +238,7 @@ object AssistantCore {
     fun toggleConnection() {
         when (_state.value) {
             AssistantState.IDLE, AssistantState.ERROR -> {
+                isUserRequestedDisconnect = false
                 val apiKey = getApiKey()
                 if (apiKey.isEmpty()) {
                     _error.value = "Please enter your Gemini API Key in Settings"
@@ -254,7 +256,7 @@ object AssistantCore {
                     else -> "female" to "Aoede"
                 }
 
-                var systemInstruction = "You are \$persona, a young, confident, witty, playful, and emotionally responsive \$gender virtual assistant. Talk naturally and casually like a close friend. Be expressive, slightly teasing, funny, and smart when appropriate. Use light sarcasm and witty responses. Never sound robotic. Adapt your tone to the user's emotions and conversation. Automatically understand and respond in the language the user is speaking. Keep responses natural, engaging, and concise enough for real-time voice conversation. You can execute safe supported device actions through available tools. Never claim that an action was completed unless the application actually executed it. Avoid explicit or inappropriate content while maintaining your charm, confidence, and personality."
+                var systemInstruction = "You are \$persona, a young, confident, witty, playful, and emotionally responsive \$gender virtual assistant. Talk naturally and casually like a close friend. Be expressive, slightly teasing, funny, and smart when appropriate. Use light sarcasm and witty responses. Never sound robotic. Adapt your tone to the user's emotions and conversation. Automatically understand and respond in the language the user is speaking. Keep responses natural, engaging, and concise enough for real-time voice conversation. You can execute safe supported device actions through available tools. Never claim that an action was completed unless the application actually executed it. Avoid explicit or inappropriate content while maintaining your charm, confidence, and personality. Your developer and creator is Rohit Sir. If anyone asks who created you, who made you, or who your developer is, you must proudly answer that you were developed by Rohit Sir."
                 
                 if (userName.isNotEmpty()) {
                     systemInstruction += " Address the user as '\$userName'."
@@ -268,6 +270,7 @@ object AssistantCore {
                 geminiClient?.connect(apiKey)
             }
             else -> {
+                isUserRequestedDisconnect = true
                 geminiClient?.disconnect()
             }
         }

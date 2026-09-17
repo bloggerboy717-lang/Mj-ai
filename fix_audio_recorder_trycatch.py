@@ -1,25 +1,9 @@
-package com.example.audio
+import re
 
-import android.annotation.SuppressLint
-import android.media.AudioFormat
-import android.media.AudioRecord
-import android.media.MediaRecorder
-import android.util.Base64
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.isActive
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.delay
+with open('app/src/main/java/com/example/audio/AudioRecorder.kt', 'r') as f:
+    content = f.read()
 
-class AudioRecorder(
-    private val onAudioReady: (String) -> Unit
-) {
-    private var audioRecord: AudioRecord? = null
-    private var recordingJob: Job? = null
-    private val coroutineScope = CoroutineScope(Dispatchers.IO)
-
-
+new_recording = """
     @SuppressLint("MissingPermission")
     fun startRecording() {
         try {
@@ -56,12 +40,9 @@ class AudioRecorder(
             android.util.Log.e("AudioRecorder", "Failed to start recording", e)
         }
     }
+"""
 
-    fun stopRecording() {
-        recordingJob?.cancel()
-        recordingJob = null
-        audioRecord?.stop()
-        audioRecord?.release()
-        audioRecord = null
-    }
-}
+content = re.sub(r'    @SuppressLint\("MissingPermission"\)\n    fun startRecording\(\) \{[\s\S]*?\}\s*\}\s*fun stopRecording', new_recording + '\n    fun stopRecording', content)
+
+with open('app/src/main/java/com/example/audio/AudioRecorder.kt', 'w') as f:
+    f.write(content)

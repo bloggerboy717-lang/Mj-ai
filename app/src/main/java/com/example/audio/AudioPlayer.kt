@@ -24,7 +24,7 @@ class AudioPlayer(
         val sampleRate = 24000
         val channelConfig = AudioFormat.CHANNEL_OUT_MONO
         val audioFormat = AudioFormat.ENCODING_PCM_16BIT
-        val bufferSize = AudioTrack.getMinBufferSize(sampleRate, channelConfig, audioFormat)
+        val bufferSize = AudioTrack.getMinBufferSize(sampleRate, channelConfig, audioFormat) * 4
 
         audioTrack = AudioTrack.Builder()
             .setAudioAttributes(
@@ -58,11 +58,37 @@ class AudioPlayer(
         }
     }
 
+    
+    
+    
     private fun startPlaybackLoop() {
         playbackJob = coroutineScope.launch {
             onPlaybackStateChanged(true)
+            
+            // Collect chunks for a short time to build a buffer and prevent stutter
+            val initialChunks = mutableListOf<ByteArray>()
+            try {
+                kotlinx.coroutines.withTimeout(500) {
+                    while (initialChunks.size < 4 && isActive) {
+                        val data = audioQueue.receiveCatching().getOrNull()
+                        if (data != null) {
+                            initialChunks.add(data)
+                        } else {
+                            break
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                // Timeout reached, just proceed with what we have
+            }
+            
             audioTrack?.play()
             
+            // Write initial buffered chunks
+            for (data in initialChunks) {
+                audioTrack?.write(data, 0, data.size)
+            }
+
             while (isActive) {
                 val data = audioQueue.receiveCatching().getOrNull()
                 if (data != null) {
@@ -71,8 +97,6 @@ class AudioPlayer(
                     break
                 }
                 
-                // If queue is empty, we stop spinning here and suspend on receive.
-                // However, we want to know when we are done speaking.
                 if (audioQueue.isEmpty) {
                     onPlaybackStateChanged(false)
                 } else {
