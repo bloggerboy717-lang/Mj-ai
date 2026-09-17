@@ -100,6 +100,18 @@ class GeminiLiveClient {
                     Tool(
                         functionDeclarations = listOf(
                             FunctionDeclaration(
+                                name = "getDeviceDetails",
+                                description = "Get details about the user's phone/device like battery, model, RAM, etc."
+                            ),
+                            FunctionDeclaration(
+                                name = "getLocation",
+                                description = "Get the user's current physical location (City, State, Country)."
+                            ),
+                            FunctionDeclaration(
+                                name = "getWeather",
+                                description = "Get the current weather conditions for the user's location."
+                            ),
+                            FunctionDeclaration(
                                 name = "openWhatsApp",
                                 description = "Open WhatsApp application"
                             ),
@@ -107,8 +119,8 @@ class GeminiLiveClient {
                                 name = "openApp",
                                 description = "Open a specific application by name",
                                 parameters = Parameters(
-                                    type = "OBJECT",
-                                    properties = mapOf("appName" to Property(type = "STRING", description = "The name of the app to open")),
+                                    type = "object",
+                                    properties = mapOf("appName" to Property(type = "string", description = "The name of the app to open")),
                                     required = listOf("appName")
                                 )
                             ),
@@ -116,8 +128,8 @@ class GeminiLiveClient {
                                 name = "openUrl",
                                 description = "Open a website URL",
                                 parameters = Parameters(
-                                    type = "OBJECT",
-                                    properties = mapOf("url" to Property(type = "STRING", description = "The URL to open")),
+                                    type = "object",
+                                    properties = mapOf("url" to Property(type = "string", description = "The URL to open")),
                                     required = listOf("url")
                                 )
                             ),
@@ -125,8 +137,8 @@ class GeminiLiveClient {
                                 name = "makeCall",
                                 description = "Initiate a phone call to a given phone number",
                                 parameters = Parameters(
-                                    type = "OBJECT",
-                                    properties = mapOf("phoneNumber" to Property(type = "STRING", description = "The phone number to call")),
+                                    type = "object",
+                                    properties = mapOf("phoneNumber" to Property(type = "string", description = "The phone number to call")),
                                     required = listOf("phoneNumber")
                                 )
                             ),
@@ -134,8 +146,8 @@ class GeminiLiveClient {
                                 name = "callContact",
                                 description = "Call a contact by their name",
                                 parameters = Parameters(
-                                    type = "OBJECT",
-                                    properties = mapOf("contactName" to Property(type = "STRING", description = "The name of the contact to call")),
+                                    type = "object",
+                                    properties = mapOf("contactName" to Property(type = "string", description = "The name of the contact to call")),
                                     required = listOf("contactName")
                                 )
                             )

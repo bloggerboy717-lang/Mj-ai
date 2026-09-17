@@ -158,6 +158,15 @@ object AssistantCore {
                         mapOf("error" to "Contact not found", "contactFound" to "false")
                     }
                 }
+                "getDeviceDetails" -> {
+                    bridge.getDeviceDetails()
+                }
+                "getLocation" -> {
+                    bridge.getLocation()
+                }
+                "getWeather" -> {
+                    bridge.getWeather()
+                }
                 else -> mapOf("error" to "Unknown tool")
             }
         } catch (e: Exception) {
