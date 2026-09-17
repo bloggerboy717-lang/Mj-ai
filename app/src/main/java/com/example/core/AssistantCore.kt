@@ -32,6 +32,12 @@ object AssistantCore {
     private val _chatMessages = MutableStateFlow<List<ChatMessage>>(emptyList())
     val chatMessages: StateFlow<List<ChatMessage>> = _chatMessages.asStateFlow()
 
+    private val _orbSizeFlow = MutableStateFlow(1f)
+    val orbSizeFlow: StateFlow<Float> = _orbSizeFlow.asStateFlow()
+
+    private val _orbThemeFlow = MutableStateFlow(0)
+    val orbThemeFlow: StateFlow<Int> = _orbThemeFlow.asStateFlow()
+
     private var deviceActionBridge: DeviceActionBridge? = null
     private var geminiClient: GeminiLiveClient? = null
     private var audioRecorder: AudioRecorder? = null
@@ -45,6 +51,9 @@ object AssistantCore {
     fun init(appContext: Context) {
         if (isInitialized) return
         context = appContext.applicationContext
+        
+        _orbSizeFlow.value = getOrbSize()
+        _orbThemeFlow.value = getOrbTheme()
         deviceActionBridge = DeviceActionBridge(context!!)
         
         geminiClient = GeminiLiveClient()
@@ -63,6 +72,12 @@ object AssistantCore {
 
         coroutineScope.launch {
             geminiClient?.serverMessages?.collect { serverMessage ->
+                if (serverMessage.setupComplete != null) {
+                    Log.d("AssistantCore", "Setup complete received, starting audio recording")
+                    _state.value = AssistantState.LISTENING
+                    audioRecorder?.startRecording()
+                }
+                
                 serverMessage.serverContent?.modelTurn?.parts?.forEach { part ->
                     part.inlineData?.let { inlineData ->
                         if (inlineData.mimeType.startsWith("audio/pcm")) {
@@ -102,8 +117,8 @@ object AssistantCore {
         coroutineScope.launch {
             geminiClient?.connectionState?.collect { isConnected ->
                 if (isConnected) {
-                    _state.value = AssistantState.LISTENING
-                    audioRecorder?.startRecording()
+                    // Do not start recording until setupComplete is received
+                    _state.value = AssistantState.CONNECTING
                 } else {
                     val wasActive = _state.value == AssistantState.LISTENING || _state.value == AssistantState.SPEAKING
                     _state.value = AssistantState.IDLE
@@ -224,6 +239,7 @@ object AssistantCore {
     fun saveOrbSize(size: Float) {
         val prefs = context?.getSharedPreferences("mj_settings", Context.MODE_PRIVATE)
         prefs?.edit()?.putFloat("orb_size", size)?.apply()
+        _orbSizeFlow.value = size
     }
 
     fun getOrbTheme(): Int {
@@ -234,6 +250,7 @@ object AssistantCore {
     fun saveOrbTheme(themeIndex: Int) {
         val prefs = context?.getSharedPreferences("mj_settings", Context.MODE_PRIVATE)
         prefs?.edit()?.putInt("orb_theme", themeIndex)?.apply()
+        _orbThemeFlow.value = themeIndex
     }
 
     fun sendTextMessage(text: String) {

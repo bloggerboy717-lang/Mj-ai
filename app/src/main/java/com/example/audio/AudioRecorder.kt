@@ -22,6 +22,7 @@ class AudioRecorder(
 
     @SuppressLint("MissingPermission")
     fun startRecording() {
+        if (recordingJob?.isActive == true) return
         try {
             val sampleRate = 16000
             val channelConfig = AudioFormat.CHANNEL_IN_MONO

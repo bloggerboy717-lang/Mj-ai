@@ -480,7 +480,7 @@ fun AssistantScreen(
                 // Force LISTENING state so it always spins colorfully
                 state = if (state == AssistantState.IDLE) AssistantState.LISTENING else state,
                 modifier = Modifier.fillMaxSize(),
-                sizeMultiplier = viewModel.getOrbSize(),
+                sizeMultiplier = 1f, // App inner orb fixed size
                 themeIndex = viewModel.getOrbTheme()
             )
         }

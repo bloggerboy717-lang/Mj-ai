@@ -101,26 +101,30 @@ class GeminiLiveClient {
                         functionDeclarations = listOf(
                             FunctionDeclaration(
                                 name = "getDeviceDetails",
-                                description = "Get details about the user's phone/device like battery, model, RAM, etc."
+                                description = "Get details about the user's phone/device like battery, model, RAM, etc.",
+                                parameters = Parameters(type = "OBJECT", properties = emptyMap())
                             ),
                             FunctionDeclaration(
                                 name = "getLocation",
-                                description = "Get the user's current physical location (City, State, Country)."
+                                description = "Get the user's current physical location (City, State, Country).",
+                                parameters = Parameters(type = "OBJECT", properties = emptyMap())
                             ),
                             FunctionDeclaration(
                                 name = "getWeather",
-                                description = "Get the current weather conditions for the user's location."
+                                description = "Get the current weather conditions for the user's location.",
+                                parameters = Parameters(type = "OBJECT", properties = emptyMap())
                             ),
                             FunctionDeclaration(
                                 name = "openWhatsApp",
-                                description = "Open WhatsApp application"
+                                description = "Open WhatsApp application",
+                                parameters = Parameters(type = "OBJECT", properties = emptyMap())
                             ),
                             FunctionDeclaration(
                                 name = "openApp",
                                 description = "Open a specific application by name",
                                 parameters = Parameters(
-                                    type = "object",
-                                    properties = mapOf("appName" to Property(type = "string", description = "The name of the app to open")),
+                                    type = "OBJECT",
+                                    properties = mapOf("appName" to Property(type = "STRING", description = "The name of the app to open")),
                                     required = listOf("appName")
                                 )
                             ),
@@ -128,8 +132,8 @@ class GeminiLiveClient {
                                 name = "openUrl",
                                 description = "Open a website URL",
                                 parameters = Parameters(
-                                    type = "object",
-                                    properties = mapOf("url" to Property(type = "string", description = "The URL to open")),
+                                    type = "OBJECT",
+                                    properties = mapOf("url" to Property(type = "STRING", description = "The URL to open")),
                                     required = listOf("url")
                                 )
                             ),
@@ -137,8 +141,8 @@ class GeminiLiveClient {
                                 name = "makeCall",
                                 description = "Initiate a phone call to a given phone number",
                                 parameters = Parameters(
-                                    type = "object",
-                                    properties = mapOf("phoneNumber" to Property(type = "string", description = "The phone number to call")),
+                                    type = "OBJECT",
+                                    properties = mapOf("phoneNumber" to Property(type = "STRING", description = "The phone number to call")),
                                     required = listOf("phoneNumber")
                                 )
                             ),
@@ -146,8 +150,8 @@ class GeminiLiveClient {
                                 name = "callContact",
                                 description = "Call a contact by their name",
                                 parameters = Parameters(
-                                    type = "object",
-                                    properties = mapOf("contactName" to Property(type = "string", description = "The name of the contact to call")),
+                                    type = "OBJECT",
+                                    properties = mapOf("contactName" to Property(type = "STRING", description = "The name of the contact to call")),
                                     required = listOf("contactName")
                                 )
                             )

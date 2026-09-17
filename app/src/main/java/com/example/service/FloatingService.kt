@@ -111,11 +111,14 @@ class FloatingService : Service() {
             setContent {
                 MyApplicationTheme {
                     val state by AssistantCore.state.collectAsState()
+                    val orbSize by AssistantCore.orbSizeFlow.collectAsState()
+                    val orbTheme by AssistantCore.orbThemeFlow.collectAsState()
                     
                     if (state != AssistantState.IDLE && state != AssistantState.ERROR) {
+                        val displaySize = (120 * orbSize).dp
                         Box(
                             modifier = Modifier
-                                .size(120.dp)
+                                .size(displaySize)
                                 .pointerInput(Unit) {
                                     detectDragGestures { change, dragAmount ->
                                         change.consume()
@@ -140,8 +143,8 @@ class FloatingService : Service() {
                             com.example.ui.FloatingOrb(
                                 state = state,
                                 modifier = Modifier.fillMaxSize(),
-                                sizeMultiplier = AssistantCore.getOrbSize(),
-                                themeIndex = AssistantCore.getOrbTheme()
+                                sizeMultiplier = 1f,
+                                themeIndex = orbTheme
                             )
                         }
                     }
